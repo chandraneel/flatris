@@ -1,0 +1,51 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: chanchakaks.azurecr.io
+        username: ${{ secrets.acr_chanchakaks_username }}
+        password: ${{ secrets.acr_chanchakaks_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/Application" -f  "Application/Dockerfile" -t chanchakaks.azurecr.io/ccaksworkshop:${{ github.sha }}
+        docker push chanchakaks.azurecr.io/ccaksworkshop:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_ccaksworkshop_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep ccaksworkshop0174 | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace ccaksworkshop0174`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: ccaksworkshop0174
+        container-registry-url: chanchakaks.azurecr.io
+        container-registry-username: ${{ secrets.acr_chanchakaks_username }}
+        container-registry-password: ${{ secrets.acr_chanchakaks_password }}
+        secret-name: ccaksworkshodockerauth
+       
+    - uses: azure/k8s-deploy@v1
+      with:
+        namespace: ccaksworkshop0174
+        manifests: |
+          manifests/deployment.yml
+          manifests/service.yml
+          manifests/ingress.yml
+        images: |
+          chanchakaks.azurecr.io/ccaksworkshop:${{ github.sha }}
+        imagepullsecrets: |
+          ccaksworkshodockerauth
