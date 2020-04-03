@@ -1,0 +1,16 @@
+apiVersion : apps/v1beta1
+kind: Deployment
+metadata:
+  name: "joykube8"
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: "joykube8"
+    spec:
+      containers:
+        - name: "joykube8"
+          image: "joykube8.azurecr.io/joykube8"
+          ports:
+          - containerPort: 3000
