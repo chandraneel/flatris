@@ -1,0 +1,16 @@
+apiVersion : apps/v1beta1
+kind: Deployment
+metadata:
+  name: "proxynorbaccluster2-f981"
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: "proxynorbaccluster2-f981"
+    spec:
+      containers:
+        - name: "proxynorbaccluster2-f981"
+          image: "cctest132.azurecr.io/proxynorbaccluster2"
+          ports:
+          - containerPort: 3000
