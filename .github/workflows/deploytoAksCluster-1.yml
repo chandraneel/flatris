@@ -1,0 +1,50 @@
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    
+    - uses: azure/docker-login@v1
+      with:
+        login-server: cctest132.azurecr.io
+        username: ${{ secrets.acr_cctest132_username }}
+        password: ${{ secrets.acr_cctest132_password }}
+    
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        docker build "$GITHUB_WORKSPACE/Application" -f  "Application/Dockerfile" -t cctest132.azurecr.io/proxynorbaccluster2:${{ github.sha }}
+        docker push cctest132.azurecr.io/proxynorbaccluster2:${{ github.sha }}
+    
+    - uses: azure/k8s-set-context@v1
+      with:
+         kubeconfig: ${{ secrets.aks_proxynorbaccluster2_kubeConfig }}
+      id: login
+    
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep proxynorbaccluster2382e | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace proxynorbaccluster2382e`
+        fi
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: proxynorbaccluster2382e
+        container-registry-url: cctest132.azurecr.io
+        container-registry-username: ${{ secrets.acr_cctest132_username }}
+        container-registry-password: ${{ secrets.acr_cctest132_password }}
+        secret-name: proxynorbaccdockerauth
+       
+    - uses: azure/k8s-deploy@v1
+      with:
+        namespace: proxynorbaccluster2382e
+        manifests: |
+          manifests/deployment-1.yml
+          manifests/service-1.yml
+        images: |
+          cctest132.azurecr.io/proxynorbaccluster2:${{ github.sha }}
+        imagepullsecrets: |
+          proxynorbaccdockerauth
