@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cctest-config
+  namespace: cctest
+  labels:
+    app.kubernetes.io/name: cctest
+    kubernetes.azure.com/generator: devhub
+data:
